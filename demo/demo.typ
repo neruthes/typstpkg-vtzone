@@ -1,0 +1,80 @@
+#import "../src/vtzone.typ": *
+
+
+#show: fix-cjk-punct-vertical
+
+#set page(margin: 18mm)
+#set text(font: ( "Noto Serif CJK SC", "MiSans"), size: 12pt, dir: rtl)
+
+
+
+#page[
+  #set align(center)
+  // #set text(size: 52pt)
+  #set text(size: 22pt, font: ("TeX Gyre Termes", "Noto Serif CJK SC"))
+  #v(50mm)
+
+  Demo doc for\ the
+  `vtzone`
+  package
+
+  #v(20mm)
+  #set text(size: 18pt)
+
+  using classic text \
+  三国演义
+
+  #v(1fr)
+  #set text(size: 11pt)
+  https://github.com/neruthes/typstpkg-vtzone
+]
+
+
+#let maketitle(chapid, chapname) = [
+
+  #let out1 = box(vtzone(
+    max-width: 25pt,
+    max-height: 220mm,
+  )[第#chapid;回 #parbreak() #chapname])
+  #place(top + right, {
+    set text(size: 22pt)
+    set align(center)
+    out1
+  })
+]
+
+
+// #show regex("\p{Han}"): "傳" // Debugging
+
+
+
+
+
+
+
+
+#let mkchapcontent(chapdata) = context vtzone(
+  x-scale: 110%,
+  row-gutter: 0.42em,
+  col-gutter: 0.45em,
+  max-height: page.height
+    - if type(page.margin) == dictionary { page.margin.top + page.margin.bottom } else { 2 * page.margin }
+    - 2.5 * text.size,
+  initial-skip: 30mm,
+  custom-parbreak: h(9pt),
+  chapdata,
+)
+
+#show "“": "「"
+#show "”": "」"
+
+
+#let mkchap(chapid, chapname) = {
+  maketitle(chapid, chapname)
+  mkchapcontent[ #include "d@.txt".replace("@", chapid) ]
+  pagebreak(weak: true)
+}
+
+#mkchap("001", [宴桃园豪杰三结义　斩黄巾英雄首立功])
+#mkchap("002", [张翼德怒鞭督邮　何国舅谋诛宦竖])
+#mkchap("003", [议温明董卓叱丁原　馈金珠李肃说吕布])

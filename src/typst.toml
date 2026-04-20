@@ -1,0 +1,11 @@
+[package]
+
+name = "vtzone"
+version = "0.1.1"
+entrypoint = "vtzone.typ"
+authors = ["@Neruthes"]
+license = "MIT"
+description = "Page style management."
+repository = "https://github.com/neruthes/typstpkg-vtzone"
+keywords = ["Layout"]
+categories = ["utility"]
