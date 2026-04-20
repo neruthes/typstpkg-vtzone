@@ -33,7 +33,6 @@
 #let maketitle(chapid, chapname) = [
 
   #let out1 = box(vtzone(
-    max-width: 25pt,
     max-height: 220mm,
   )[第#chapid;回 #parbreak() #chapname])
   #place(top + right, {

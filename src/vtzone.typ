@@ -14,13 +14,11 @@
   doc,
   x-scale: 100%,
   max-height: auto,
-  max-width: auto,
   horizontal: rtl,
   row-gutter: 0.37em,
   col-gutter: 0.5em,
   custom-parbreak: none,
   initial-skip: 0mm,
-  vskip: 8mm,
 ) = context {
   let actual-max-h = if max-height == auto { 100mm } else { max-height }
   let row-gutter-pt = measure(v(row-gutter)).height
