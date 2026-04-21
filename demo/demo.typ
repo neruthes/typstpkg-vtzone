@@ -4,7 +4,7 @@
 #show: fix-cjk-punct-vertical
 
 #set page(margin: 18mm)
-#set text(font: ( "Noto Serif CJK SC", "MiSans"), size: 12pt, dir: rtl)
+#set text(font: ("Noto Serif CJK SC", "MiSans"), size: 12pt, dir: rtl)
 
 
 
@@ -66,7 +66,12 @@
 
 #show "“": "「"
 #show "”": "」"
-
+/*
+for txt in demo/d*.txt; do
+  sed -i 's/“/「/g' "$txt"
+  sed -i 's/”/」/g' "$txt"
+done
+*/
 
 #let mkchap(chapid, chapname) = {
   maketitle(chapid, chapname)

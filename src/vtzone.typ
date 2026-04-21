@@ -22,7 +22,7 @@
 ) = context {
   let actual-max-h = if max-height == auto { 100mm } else { max-height }
   let row-gutter-pt = measure(v(row-gutter)).height
-  
+
   let get-atoms(it) = {
     if it == [] or it == [ ] { return () }
     if it.func() == linebreak or it.func() == parbreak { return (it.func(),) }
@@ -35,12 +35,12 @@
     if it.has("body") { return get-atoms(it.body) }
     return (box(it),)
   }
-  
+
   // Use mutable array for atoms so we can easily prepend/modify
   let atoms = get-atoms(doc)
-  let enders = regex("^[.,;:!?，。；：！？、」』）〉】]$")
-  let leaders = regex("^[「『（〈【]$")
-  
+  let enders = regex("^[.,;:!?，。；：！？、」』）〉】”]$")
+  let leaders = regex("^[「『（〈【“]$")
+
   let get-txt(atom) = {
     if type(atom) == symbol { return str(atom) }
     if type(atom) == content {
@@ -54,25 +54,25 @@
     }
     ""
   }
-  
+
   let output-flow = ()
   if initial-skip > 0mm {
     output-flow.push(box(h(initial-skip)))
   }
-  
+
   let current-col = ()
   let i = 0
-  
+
   let calc-h(atom_list) = {
     if atom_list.len() == 0 { return 0pt }
     let h_sum = atom_list.map(a => measure(a).height).sum()
     let g_sum = (atom_list.len() - 1) * row-gutter-pt
     h_sum + g_sum
   }
-  
+
   while i < atoms.len() {
     let atom = atoms.at(i)
-    
+
     // 1. Handle explicit breaks
     if atom == linebreak or atom == parbreak {
       if current-col.len() > 0 {
@@ -87,10 +87,10 @@
       i += 1
       continue
     }
-    
+
     let atom-h = measure(atom).height
     let gap = if current-col.len() > 0 { row-gutter-pt } else { 0pt }
-    
+
     // 2. Check for Overflow
     if calc-h(current-col) + gap + atom-h > actual-max-h {
       // RULE: If the character that failed to fit is an "Ender",
@@ -112,7 +112,7 @@
           atoms.insert(i, pulled)
         }
       }
-      
+
       // Flush the column (unless it became empty from pulling)
       if current-col.len() > 0 {
         output-flow.push(box(stack(dir: ttb, spacing: row-gutter, ..current-col)))
@@ -128,12 +128,12 @@
       i += 1
     }
   }
-  
+
   // Final Flush
   if current-col.len() > 0 {
     output-flow.push(box(stack(dir: ttb, spacing: row-gutter, ..current-col)))
   }
-  
+
   // Render
   {
     set text(dir: horizontal)
