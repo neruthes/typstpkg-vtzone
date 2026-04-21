@@ -80,7 +80,7 @@ done
 // }
 #let mkchap(chapid, chapname) = {
   mkchapcontent[
-    #text(size: 18pt, weight: 600,)[第#chapid;回 #parbreak() #chapname]
+    #text(size: 18pt, weight: 600,)[第　#chapid;　回 #parbreak() #chapname]
     #parbreak()
     ~~ #parbreak()
     ~~ #parbreak()
