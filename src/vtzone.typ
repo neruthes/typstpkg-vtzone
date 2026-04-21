@@ -135,6 +135,7 @@
       if current-col.len() > 0 {
         output-flow.push(box(stack(dir: ttb, spacing: row-gutter, ..current-col)))
         output-flow.push(h(col-gutter, weak: false))
+        output-flow.push(custom-parbreak)
       }
       current-col = ()
       i += 1
@@ -179,7 +180,7 @@
     set par(leading: 0pt, spacing: 0pt)
     output-flow
       .map(it => {
-        box(baseline: 100%, box(scale(x: x-scale, reflow: true, align(inner-alignment, (it)))))
+        box(baseline: 100%, height: max-height, box(scale(x: x-scale, reflow: true, align(inner-alignment, (it)))))
       })
       .join()
   }
