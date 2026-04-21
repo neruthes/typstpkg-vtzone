@@ -22,24 +22,26 @@
   })
   show regex("[，。、]"): movepunctloc
   show regex("[「」【】『』❲❳［］“”《》]"): it => {
-  // Define sets for opening and closing punctuation
-  let openers = ("「【『❲［“《").clusters()
-  let is-opener = it.text in openers
-  box({
-    let that = rotate(-90deg, reflow: true, it)    
-    // Set offsets based on whether it opens or closes the phrase
-    let (dx, dy) = if is-opener {
-      (-0.1em, -0.5em)
-    } else {
-      (0.1em, 0.4em)
-    }
-    
-    place(horizon + center, dx: dx, dy: dy, box(fill: none, that))
-    hide(it)
-  })
-}
+    // Define sets for opening and closing punctuation
+    let openers = "「【『❲［“《".clusters()
+    let is-opener = it.text in openers
+    box({
+      let that = rotate(-90deg, reflow: true, it)
+      // Set offsets based on whether it opens or closes the phrase
+      let (dx, dy) = if is-opener {
+        (-0.1em, -0.5em)
+      } else {
+        (0.1em, 0.4em)
+      }
+
+      place(horizon + center, dx: dx, dy: dy, box(fill: none, that))
+      hide(it)
+    })
+  }
   doc
 }
+
+
 
 
 
@@ -61,8 +63,9 @@
   custom-parbreak: none,
   initial-skip: 0mm,
   inner-alignment: center,
+  debug: false,
 ) = context {
-  /* 
+  /*
     NOTES:
         - Ender: Ender characters are not allowed to start a column.
         - Leader: Leader characters are not allowed to end a column.
@@ -71,7 +74,7 @@
   */
   let actual-max-h = if max-height == auto { 100mm } else { max-height }
   let row-gutter-pt = measure(v(row-gutter)).height
-  
+
   let get-atoms(it, wrapper: x => x) = {
     if it == [] or it == [ ] { return () }
     let func = it.func()
@@ -97,11 +100,11 @@
     if it.has("child") { return get-atoms(it.child, wrapper: container-wrapper) }
     return (box(wrapper(it)),)
   }
-  
+
   let atoms = get-atoms(doc)
   let enders = regex("^[.,;:!?，。；：！？、」』）〉】”]$")
   let leaders = regex("^[「『（〈【“]$")
-  
+
   let get-txt(atom) = {
     if type(atom) == symbol { return str(atom) }
     if type(atom) == content {
@@ -111,23 +114,28 @@
     }
     ""
   }
-  
+
+  // Helper to colorize atoms for debug mode
+  let mark-debug(atom) = {
+    if not debug or type(atom) != content { return atom }
+    text(fill: red, atom)
+  }
+
   let output-flow = ()
   if initial-skip > 0mm { output-flow.push(box(h(initial-skip))) }
   let current-col = ()
   let i = 0
-  
+
   let calc-h(atom_list) = {
     if atom_list.len() == 0 { return 0pt }
     let h_sum = atom_list.map(a => measure(a).height).sum()
     let g_sum = (atom_list.len() - 1) * row-gutter-pt
     h_sum + g_sum
   }
-  
+
   while i < atoms.len() {
     let atom = atoms.at(i)
-    
-    // Handle Linebreaks
+
     if atom == linebreak or atom == parbreak {
       if current-col.len() > 0 {
         output-flow.push(box(stack(dir: ttb, spacing: row-gutter, ..current-col)))
@@ -138,59 +146,53 @@
       i += 1
       continue
     }
-    
+
     let atom-h = measure(atom).height
     let current-h = calc-h(current-col)
     let gap = if current-col.len() > 0 { row-gutter-pt } else { 0pt }
-    
-    // --- Logic Check: Would this atom overflow? ---
+
     if current-h + gap + atom-h > actual-max-h {
       let txt = get-txt(atom)
-      
-      // OVERHANG RULE: If current atom is an ender, allow it to "hang" 
-      // provided the NEXT atom is NOT an ender.
       let next-is-ender = if i + 1 < atoms.len() { get-txt(atoms.at(i + 1)).match(enders) != none } else { false }
-      
+
+      // Overhang check
       if txt.match(enders) != none and not next-is-ender {
-        // Accept as overhang
         current-col.push(atom)
         i += 1
       } else {
-        // UNDERHANG / KINSOKU RULE: Rollback logic
+        // Rollback (Underhang / Kinsoku)
         if txt.match(enders) != none {
-          // If we reached here, it's an ender followed by another ender (underhang)
-          // or a very long string of enders. Pop back to the last "normal" character.
           while current-col.len() > 0 {
             let last = current-col.pop()
-            atoms.insert(i, last)
+            atoms.insert(i, mark-debug(last)) // Colorize if debugging
             if get-txt(last).match(enders) == none { break }
           }
+          // The current atom that caused the overflow should also be marked
+          atoms.at(i) = mark-debug(atoms.at(i))
         } else {
-          // LEADER RULE: Don't let a leader character sit at the bottom alone
+          // Leader check
           while current-col.len() > 0 and get-txt(current-col.last()).match(leaders) != none {
-            atoms.insert(i, current-col.pop())
+            let pulled = current-col.pop()
+            atoms.insert(i, mark-debug(pulled))
           }
         }
       }
-      
-      // Close the column
+
       if current-col.len() > 0 {
         output-flow.push(box(stack(dir: ttb, spacing: row-gutter, ..current-col)))
         output-flow.push(h(col-gutter, weak: false))
         current-col = ()
       }
-      // Note: We don't increment i here unless we processed an overhang, 
-      // allowing the loop to re-evaluate the atom for the next column.
     } else {
       current-col.push(atom)
       i += 1
     }
   }
-  
+
   if current-col.len() > 0 {
     output-flow.push(box(stack(dir: ttb, spacing: row-gutter, ..current-col)))
   }
-  
+
   {
     set text(dir: horizontal)
     set par(leading: 0pt, spacing: 0pt)

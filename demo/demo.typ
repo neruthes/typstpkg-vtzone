@@ -61,6 +61,7 @@
     - 2.5 * text.size,
   // initial-skip: 30mm,
   custom-parbreak: h(9pt),
+  debug: true,
   chapdata,
 )
 
