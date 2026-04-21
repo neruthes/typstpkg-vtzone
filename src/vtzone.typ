@@ -21,16 +21,29 @@
     hide(text(fill: red.transparentize(10%), it))
   })
   show regex("[，。、]"): movepunctloc
-  show regex("[？！：；，。、]"): it => align(center, box(width: 1em, it))
-  show regex("[「」]"): it => box({
-    let that = rotate(-90deg, reflow: true, it)
-    let boxS = place(horizon + center, dx: -0.29em, dy: -0.5em, box(fill: none, that))
-    let boxE = place(horizon + center, dx: 0.0em, dy: 0.4em, box(fill: none, that))
-    (if it.text == "「" { boxS } else { boxE })
-    hide(text(fill: red.transparentize(10%), it))
+  show regex("[「」【】『』❲❳［］“”《》]"): it => {
+  // Define sets for opening and closing punctuation
+  let openers = ("「【『❲［“《").clusters()
+  let is-opener = it.text in openers
+  box({
+    let that = rotate(-90deg, reflow: true, it)    
+    // Set offsets based on whether it opens or closes the phrase
+    let (dx, dy) = if is-opener {
+      (-0.1em, -0.5em)
+    } else {
+      (0.1em, 0.4em)
+    }
+    
+    place(horizon + center, dx: dx, dy: dy, box(fill: none, that))
+    hide(it)
   })
+}
   doc
 }
+
+
+
+
 
 
 
@@ -49,57 +62,39 @@
   initial-skip: 0mm,
   inner-alignment: center,
 ) = context {
+  /* 
+    NOTES:
+        - Ender: Ender characters are not allowed to start a column.
+        - Leader: Leader characters are not allowed to end a column.
+        - Overhang: We allow up to 1 ender character to overhang at the end of the column.
+        - Underhang: When the current column already has an overhang character committed, and the upcoming character is also an ender, we should migrate both characters (and retrospectively all previous enders and the last non-ender character) to the next column.
+  */
   let actual-max-h = if max-height == auto { 100mm } else { max-height }
   let row-gutter-pt = measure(v(row-gutter)).height
   
   let get-atoms(it, wrapper: x => x) = {
     if it == [] or it == [ ] { return () }
     let func = it.func()
-    
-    // 1. Handle Explicit Breaks
     if func == linebreak or func == parbreak { return (func,) }
-    
-    // 2. Handle Text Leaves
     if it.has("text") {
       let fields = it.fields()
       let txt = fields.remove("text")
       let text-wrapper = child => wrapper(text(..fields, child))
       return txt.clusters().map(c => box(text-wrapper(c)))
     }
-    
-    // 3. Handle Sequences (common in parsed trees)
     if it.has("children") {
       return it.children.map(c => get-atoms(c, wrapper: wrapper)).flatten()
     }
-    
-    // 4. Handle Styled Elements & Containers
-    // We must reconstruct the container for each leaf cluster.
     let container-wrapper = child => {
-      // If it is a 'styled' element, we wrap the child in the same styled block
-      if it.has("styles") and it.has("child") {
-        return wrapper(it.func()(child, it.styles))
-      }
-      
-      // For standard functions (strong, emph, rotate, etc.)
+      if it.has("styles") and it.has("child") { return wrapper(it.func()(child, it.styles)) }
       let fields = it.fields()
       let clean-fields = (:)
       let forbidden = ("body", "child", "children", "styles", "text")
-      for (k, v) in fields {
-        if k not in forbidden { clean-fields.insert(k, v) }
-      }
-      
+      for (k, v) in fields { if k not in forbidden { clean-fields.insert(k, v) } }
       wrapper(it.func()(..clean-fields, child))
     }
-    
-    // Recurse into the primary content holder
-    if it.has("body") {
-      return get-atoms(it.body, wrapper: container-wrapper)
-    }
-    if it.has("child") {
-      return get-atoms(it.child, wrapper: container-wrapper)
-    }
-    
-    // Fallback
+    if it.has("body") { return get-atoms(it.body, wrapper: container-wrapper) }
+    if it.has("child") { return get-atoms(it.child, wrapper: container-wrapper) }
     return (box(wrapper(it)),)
   }
   
@@ -131,11 +126,13 @@
   
   while i < atoms.len() {
     let atom = atoms.at(i)
+    
+    // Handle Linebreaks
     if atom == linebreak or atom == parbreak {
       if current-col.len() > 0 {
         output-flow.push(box(stack(dir: ttb, spacing: row-gutter, ..current-col)))
         output-flow.push(h(col-gutter, weak: false))
-        output-flow.push(custom-parbreak)
+        if custom-parbreak != none { output-flow.push(custom-parbreak) }
       }
       current-col = ()
       i += 1
@@ -143,28 +140,47 @@
     }
     
     let atom-h = measure(atom).height
+    let current-h = calc-h(current-col)
     let gap = if current-col.len() > 0 { row-gutter-pt } else { 0pt }
     
-    if calc-h(current-col) + gap + atom-h > actual-max-h {
+    // --- Logic Check: Would this atom overflow? ---
+    if current-h + gap + atom-h > actual-max-h {
       let txt = get-txt(atom)
-      if txt.match(enders) != none {
-        while current-col.len() > 0 {
-          let last = current-col.pop()
-          atoms.insert(i, last)
-          if get-txt(last).match(enders) == none { break }
-        }
+      
+      // OVERHANG RULE: If current atom is an ender, allow it to "hang" 
+      // provided the NEXT atom is NOT an ender.
+      let next-is-ender = if i + 1 < atoms.len() { get-txt(atoms.at(i + 1)).match(enders) != none } else { false }
+      
+      if txt.match(enders) != none and not next-is-ender {
+        // Accept as overhang
+        current-col.push(atom)
+        i += 1
       } else {
-        while current-col.len() > 0 and get-txt(current-col.last()).match(leaders) != none {
-          let pulled = current-col.pop()
-          atoms.insert(i, pulled)
+        // UNDERHANG / KINSOKU RULE: Rollback logic
+        if txt.match(enders) != none {
+          // If we reached here, it's an ender followed by another ender (underhang)
+          // or a very long string of enders. Pop back to the last "normal" character.
+          while current-col.len() > 0 {
+            let last = current-col.pop()
+            atoms.insert(i, last)
+            if get-txt(last).match(enders) == none { break }
+          }
+        } else {
+          // LEADER RULE: Don't let a leader character sit at the bottom alone
+          while current-col.len() > 0 and get-txt(current-col.last()).match(leaders) != none {
+            atoms.insert(i, current-col.pop())
+          }
         }
       }
+      
+      // Close the column
       if current-col.len() > 0 {
         output-flow.push(box(stack(dir: ttb, spacing: row-gutter, ..current-col)))
         output-flow.push(h(col-gutter, weak: false))
         current-col = ()
       }
-      continue
+      // Note: We don't increment i here unless we processed an overhang, 
+      // allowing the loop to re-evaluate the atom for the next column.
     } else {
       current-col.push(atom)
       i += 1
@@ -180,9 +196,8 @@
     set par(leading: 0pt, spacing: 0pt)
     output-flow
       .map(it => {
-        box(baseline: 100%, height: max-height, box(scale(x: x-scale, reflow: true, align(inner-alignment, (it)))))
+        box(baseline: 100%, height: max-height, box(scale(x: x-scale, reflow: true, align(inner-alignment, it))))
       })
       .join()
   }
 }
-

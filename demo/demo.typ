@@ -3,7 +3,7 @@
 
 #show: fix-cjk-punct-vertical
 
-#set page(margin: 18mm)
+#set page(margin: 30mm, )
 #set text(font: ("Noto Serif CJK SC", "MiSans"), size: 12pt, dir: rtl)
 
 
@@ -12,7 +12,7 @@
   #set align(center)
   // #set text(size: 52pt)
   #set text(size: 22pt, font: ("TeX Gyre Termes", "Noto Serif CJK SC"))
-  #v(50mm)
+  #v(30mm)
 
   Demo doc for\ the
   `vtzone`
@@ -25,7 +25,7 @@
   三国演义
 
   #v(1fr)
-  #set text(size: 11pt)
+  #set text(size: 12pt)
   https://github.com/neruthes/typstpkg-vtzone
 ]
 
@@ -73,6 +73,9 @@ for txt in demo/d*.txt; do
 done
 */
 
+
+#set page(margin: 18mm, footer: { context counter(page).display() })
+
 // #let mkchap(chapid, chapname) = {
 //   maketitle(chapid, chapname)
 //   mkchapcontent[ #include "d@.txt".replace("@", chapid) ]
@@ -80,7 +83,7 @@ done
 // }
 #let mkchap(chapid, chapname) = {
   mkchapcontent[
-    #text(size: 18pt, weight: 600,)[第　#chapid;　回 #parbreak() #chapname]
+    #text(size: 18pt, weight: 600)[第　#chapid;　回 #parbreak() #chapname]
     #parbreak()
     ~~ #parbreak()
     ~~ #parbreak()
