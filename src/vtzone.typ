@@ -154,7 +154,7 @@
 #let fix-cjk-punct-vertical(doc) = {
   let movepunctloc(it) = box(stroke: 0.0pt + gray, {
     place(center + horizon, dx: 0.20em, dy: -0.4em, it)
-    text(fill: red.transparentize(100%), it)
+    hide(text(fill: red.transparentize(10%), it))
   })
   show regex("[，。、]"): movepunctloc
   show regex("[？！：；，。、]"): it => align(center, box(width: 1em, it))
@@ -163,7 +163,7 @@
     let boxS = place(horizon + center, dx: -0.29em, dy: -0.5em, box(fill: none, that))
     let boxE = place(horizon + center, dx: 0.0em, dy: 0.4em, box(fill: none, that))
     (if it.text == "「" { boxS } else { boxE })
-    text(fill: red.transparentize(100%), it)
+    hide(text(fill: red.transparentize(10%), it))
   })
   doc
 }
