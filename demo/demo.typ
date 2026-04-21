@@ -59,7 +59,7 @@
   max-height: page.height
     - if type(page.margin) == dictionary { page.margin.top + page.margin.bottom } else { 2 * page.margin }
     - 2.5 * text.size,
-  initial-skip: 30mm,
+  // initial-skip: 30mm,
   custom-parbreak: h(9pt),
   chapdata,
 )
@@ -73,9 +73,20 @@ for txt in demo/d*.txt; do
 done
 */
 
+// #let mkchap(chapid, chapname) = {
+//   maketitle(chapid, chapname)
+//   mkchapcontent[ #include "d@.txt".replace("@", chapid) ]
+//   pagebreak(weak: true)
+// }
 #let mkchap(chapid, chapname) = {
-  maketitle(chapid, chapname)
-  mkchapcontent[ #include "d@.txt".replace("@", chapid) ]
+  mkchapcontent[
+    #text(size: 18pt, weight: 600,)[第#chapid;回 #parbreak() #chapname]
+    #parbreak()
+    ~~ #parbreak()
+    ~~ #parbreak()
+    ~~ #parbreak()
+    #include "d@.txt".replace("@", chapid)
+  ]
   pagebreak(weak: true)
 }
 
